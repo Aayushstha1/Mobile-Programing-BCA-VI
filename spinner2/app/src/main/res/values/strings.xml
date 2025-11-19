@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">spinner2</string>
+    <string-array name="myList"
+</resources>
