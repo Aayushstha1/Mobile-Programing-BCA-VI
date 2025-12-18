@@ -11,7 +11,7 @@ public class Student {
     public int getImageId() {return imageId;}
 
     public void setImageId(int imageId) {
-        imageId=imgid ;
+        imageId= imageId ;
         }
     public String getName() {
         return name;
