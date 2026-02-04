@@ -1,102 +1,124 @@
 package com.example.myrecylerviewexample;
 
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
-import android.content.DialogInterface;
 
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.myrecycleviewexample.Student;
-
 import java.util.ArrayList;
 
 public class MyActivity extends AppCompatActivity {
-    Button btnRegister;
-    RecyclerView myRecyclerView;
-    ArrayList<Student> list=new ArrayList<>();
+
+    private Button btnRegister;
+    private RecyclerView myRecyclerView;
+
+    ArrayList<Student> list;
     MyAdapter adapter;
-    RecyclerView.LayoutManager layoutManager;
+
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.my_activity_layout);
+
         btnRegister = findViewById(R.id.btnRegister);
         myRecyclerView = findViewById(R.id.myRecyclerView);
-        layoutManager = new LinearLayoutManager(this);
-        myRecyclerView.setLayoutManager(layoutManager);
-        list.add(new Student("Ram", "9807654321"));
-//        list.add(new Student("Hem", "97088843244"));
+
+        list = new ArrayList<>();
         adapter = new MyAdapter(this, list);
+
+        myRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         myRecyclerView.setAdapter(adapter);
-        btnRegister.setOnClickListener(e -> {
-            shoeEditDialog(new Student("", ""));
-        });
+
+        // Register new student
+        btnRegister.setOnClickListener(v -> showEditDialog(null));
     }
-    public void shoeEditDialog(Student s){
+
+    /**
+     * If student == null => add new student
+     * If student != null => update existing student
+     */
+    public void showEditDialog(Student student) {
+        boolean isNew = (student == null);
+
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        LayoutInflater inflater=LayoutInflater.from(this);
-        View v=inflater.inflate(R.layout.student_form_layout,null,false);
-        EditText editName=v.findViewById(R.id.editName);
-        EditText editPhone=v.findViewById(R.id.editPhone);
-        editName.setText(s.getName());
-        editPhone.setText(s.getPhone());
-        Button btnSubmit=v.findViewById(R.id.btnSubmit);
-
-        if(s.getName().equals("")) {
-            builder.setTitle("Register Student");
-
-        }else {
-            builder.setTitle("Update Student");
-
-        }
+        builder.setTitle(isNew ? "Register Student" : "Update Student");
         builder.setCancelable(true);
-        builder.setView(v);
-        AlertDialog dialog=builder.create();
-        btnSubmit.setOnClickListener(e->{
-            if (s.getName().equals(""))
-            {
-                s.setName(editName.getText().toString());
-                s.setPhone(editPhone.getText().toString());
+
+        LayoutInflater inflater = LayoutInflater.from(this);
+        View view = inflater.inflate(R.layout.student_form_layout, null, false);
+
+        EditText editName = view.findViewById(R.id.editName);
+        EditText editPhone = view.findViewById(R.id.editPhone);
+        Button btnSubmit = view.findViewById(R.id.btnSubmit);
+
+        // Pre-fill for update
+        if (!isNew) {
+            editName.setText(student.getName());
+            editPhone.setText(student.getPhone());
+        }
+
+        builder.setView(view);
+
+        AlertDialog dialog = builder.create();
+
+        btnSubmit.setOnClickListener(v -> {
+            String name = editName.getText().toString().trim();
+            String phone = editPhone.getText().toString().trim();
+
+            if (name.isEmpty()) {
+                editName.setError("Name required");
+                editName.requestFocus();
+                return;
+            }
+            if (phone.isEmpty()) {
+                editPhone.setError("Phone required");
+                editPhone.requestFocus();
+                return;
+            }
+
+            if (isNew) {
+                Student s = new Student(name, phone);
                 list.add(s);
-                Toast.makeText(MyActivity.this,"Student registered successfully",Toast.LENGTH_LONG).show();
-                dialog.dismiss();
-            }else {
-                s.setName(editName.getText().toString());
-                s.setPhone(editPhone.getText().toString());
-                Toast.makeText(MyActivity.this, "Student update successfully", Toast.LENGTH_LONG).show();
-                dialog.dismiss();
-            }
-            adapter.notifyDataSetChanged();
-        });
-        dialog.show();
-    }
-    public void showRemoveDialog(Student s){
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Remove Student");
-        builder.setCancelable(false);
-        builder.setMessage("Are you sure to remove this student?");
-        AlertDialog dialog=builder.create();
-        builder.setPositiveButton("Yes", (dialog1, which) -> {
-            @Override
-            public void onClick(DialogInterface dialog, int i) {
-                list.remove(position);
-                adapter.notifyDataSetChanged();
-                dialog.dismiss();
-
+                adapter.notifyItemInserted(list.size() - 1);
+                Toast.makeText(this, "Student Registered", Toast.LENGTH_SHORT).show();
+            } else {
+                student.setName(name);
+                student.setPhone(phone);
+                int pos = list.indexOf(student);
+                if (pos >= 0) adapter.notifyItemChanged(pos);
+                else adapter.notifyDataSetChanged();
+                Toast.makeText(this, "Student Updated", Toast.LENGTH_SHORT).show();
             }
 
-
+            dialog.dismiss();
         });
+
         dialog.show();
     }
 
+    public void showDeleteConfirm(int position) {
+        if (position < 0 || position >= list.size()) return;
 
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Student")
+                .setMessage("Are you sure you want to delete this student?")
+                .setCancelable(true)
+                .setPositiveButton("Delete", (DialogInterface d, int which) -> {
+                    list.remove(position);
+                    adapter.notifyItemRemoved(position);
+                    adapter.notifyItemRangeChanged(position, list.size());
+                    d.dismiss();
+                    Toast.makeText(this, "Deleted", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Cancel", (d, which) -> d.dismiss())
+                .show();
+    }
 }
